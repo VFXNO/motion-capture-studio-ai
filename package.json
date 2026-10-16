@@ -1,0 +1,13 @@
+{
+  "name": "motion-capture-studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "python serve.py",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.0"
+  }
+}

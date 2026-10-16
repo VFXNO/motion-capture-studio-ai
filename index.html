@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101217">
+  <title>Framecraft — Motion Capture Studio</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="root-motion.css">
+  <link rel="stylesheet" href="repair.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="Framecraft home"><span class="brand-icon">f</span>framecraft<span class="beta">LOCAL STUDIO</span></a>
+    <span class="privacy"><span class="dot"></span> Your footage stays on this device</span>
+  </header>
+  <main>
+    <section class="heading">
+      <div><p class="eyebrow">VIDEO → MOVEMENT → BLENDER</p><h1>Bring movement to life<span>.</span></h1><p class="subtitle">Capture body, hands, and expression. No suit. Just your video.</p></div>
+      <a href="#workflow" class="text-link">How it works ↗</a>
+    </section>
+    <div class="workspace">
+      <section class="viewer-panel panel" aria-label="Video and tracking preview">
+        <div class="panel-top"><span><span class="dot accent"></span> CAPTURE VIEW</span><span id="videoInfo">NO VIDEO LOADED</span></div>
+        <div id="dropzone" class="stage" tabindex="0" role="button" aria-label="Choose or drop a recorded video">
+          <video id="video" playsinline preload="metadata" hidden></video>
+          <canvas id="overlay" hidden aria-hidden="true"></canvas>
+          <div id="emptyState" class="empty-state">
+            <div class="upload-icon" aria-hidden="true">↥</div>
+            <h2>Every motion starts with a frame.</h2>
+            <p>Drop your video here, or browse your files.</p>
+            <span class="button primary">Choose a video <span>↗</span></span>
+            <small>MP4, MOV, WEBM · browser-supported codecs · one performer</small>
+          </div>
+          <div class="viewer-badge" id="viewerBadge" hidden>ORIGINAL + TRACKING</div>
+        </div>
+        <input id="fileInput" type="file" accept="video/*,.mov,.mkv" hidden>
+        <div class="transport">
+          <button id="playButton" class="icon-button" aria-label="Play video" disabled>▶</button>
+          <span id="currentTime" class="time">00:00.00</span>
+          <input id="timeline" type="range" min="0" max="1" step="0.001" value="0" aria-label="Video timeline" disabled>
+          <span id="duration" class="time">00:00.00</span>
+          <button id="replaceButton" class="icon-button" title="Choose another video" aria-label="Choose another video">↥</button>
+        </div>
+        <div class="legend"><span><i class="body-dot"></i> Body</span><span><i class="hand-dot"></i> Hands</span><span><i class="face-dot"></i> Face</span><label><input id="showOverlay" type="checkbox" checked> Show tracking</label></div>
+      </section>
+      <aside class="settings panel">
+        <div class="panel-top"><span>CAPTURE SETUP</span><span class="step">01 / 03</span></div>
+        <section class="settings-section">
+          <h2>One video. Every detail.</h2><p>Choose the layers you want to extract.</p>
+          <label class="track-option"><span class="track-icon body-color">⌘</span><span><strong>Full body</strong><small>33 landmarks · 3D pose</small></span><input id="captureBody" type="checkbox" checked></label>
+          <label class="track-option"><span class="track-icon hand-color">✳</span><span><strong>Hands & fingers</strong><small>21 landmarks per hand</small></span><input id="captureHands" type="checkbox" checked></label>
+          <label class="track-option"><span class="track-icon face-color">◉</span><span><strong id="faceTitle">Facial landmarks</strong><small id="faceDetails">68 landmarks · native face wire mesh</small></span><input id="captureFace" type="checkbox" checked></label>
+        </section>
+        <section class="settings-section compact">
+          <div class="field"><label for="captureEngine">AI engine</label><select id="captureEngine"><option value="rtmw3d" selected>RTMW3D-X · local AI</option><option value="mediapipe">MediaPipe · browser AI</option></select><small id="engineNote">Automatic setup on first capture · no commands or account needed.</small></div>
+          <div id="browserSettings" class="field" hidden><label for="trackingQuality">Browser tracking quality · MediaPipe</label><select id="trackingQuality"><option value="accurate" selected>High accuracy · heavy body model</option><option value="balanced">Balanced · faster body model</option></select><small>High accuracy is slower. It cannot recover hidden details.</small></div>
+          <div id="localSettings"><div class="field"><label for="actorHeight">Approximate performer height</label><input id="actorHeight" type="number" min="1" max="2.5" step=".01" value="1.7" required><small>Meters · used for estimated scale</small></div><div class="field"><label for="computeDevice">Local compute</label><select id="computeDevice"><option value="dml">GPU · DirectML</option><option value="cpu">CPU · slower</option></select></div><label class="root-toggle"><input id="createBlend" type="checkbox" checked> Create Blender scene automatically</label><small id="blenderNote">Uses a fresh background Blender process; does not touch open scenes.</small></div>
+          <p class="local-note"><a href="rtmw3d.html">RTMW3D-X · automatic workflow ↗</a><br>Apache 2.0 · no SMPL assets · full body must be visible<br><a href="gvhmr.html">GVHMR local backend · licensed assets required ↗</a></p>
+          <div class="field"><label for="sampleRate">Capture frame rate</label><select id="sampleRate"><option value="12">12 fps · faster</option><option value="24" selected>24 fps · balanced</option><option value="30">30 fps · detailed</option></select></div>
+          <div class="field"><label for="smoothing">Motion cleanup <span id="smoothingValue">35%</span></label><input id="smoothing" type="range" min="0" max="0.85" step="0.05" value="0.35"><small>Adaptive, two-pass cleanup after tracking. 0% preserves raw data.</small></div>
+        </section>
+        <section class="root-settings">
+          <label class="root-toggle"><input id="captureRoot" type="checkbox" checked> Ground-based root motion <span class="beta-tag">ESTIMATED</span></label>
+          <p>Fixed camera, flat floor, visible feet. Root follows travel instead of staying in place.</p>
+          <div class="camera-fields">
+            <div class="field"><label for="cameraFov">Horizontal lens FOV</label><input id="cameraFov" type="number" min="30" max="100" step="1" value="60" required><small>30–100 degrees</small></div>
+            <div class="field"><label for="cameraPitch">Camera downward tilt</label><input id="cameraPitch" type="number" min="-15" max="60" step="1" value="10" required><small>0° = level camera</small></div>
+          </div>
+          <label class="root-toggle"><input id="footStabilization" type="checkbox" checked> Stabilize planted feet</label>
+          <button id="repairCaptureButton" class="button secondary wide repair-button">Repair older capture JSON <span>↗</span></button>
+          <label class="root-toggle"><input id="cleanSavedCapture" type="checkbox" checked> Also clean saved motion</label>
+          <small class="repair-note">Already exported for Blender? Add root travel from saved landmarks without running the AI again.</small>
+          <input id="repairCaptureInput" type="file" accept=".json,application/json" hidden>
+        </section>
+        <div class="action-area"><button id="captureButton" class="button primary wide" disabled>Extract motion <span>↗</span></button><button id="cancelButton" class="button secondary wide" hidden>Cancel capture</button><p class="local-note">Runs locally · No account · Never uploaded to cloud<br>First capture installs isolated AI packages and downloads models automatically.</p></div>
+      </aside>
+    </div>
+    <section class="status-panel panel" aria-label="Capture status" aria-live="polite">
+      <div class="status-copy"><span id="statusIcon" class="status-icon">◇</span><div><h2 id="statusTitle">Your stage is ready</h2><p id="statusText">Add a recorded video to start your first capture.</p></div></div>
+      <div id="progressArea" hidden><span id="progressText">0%</span><progress id="progress" max="1" value="0" aria-label="Capture progress"></progress></div>
+      <div id="captureStats" class="stats" hidden></div>
+    </section>
+    <section id="rootPreviewPanel" class="panel root-preview" hidden aria-label="Ground motion preview">
+      <div class="panel-top"><span>GROUND PATH · TOP VIEW</span><span id="rootCoverage"></span></div>
+      <div class="root-preview-content"><canvas id="rootMap" width="640" height="220" aria-label="Estimated root path across the ground"></canvas><div><h2>The performance travels.</h2><p id="rootReadout">Review root position on the timeline.</p><small>Estimated meters · +X right · +Y away · Z height<br>Ground plane is Z = 0. Not camera-motion compensated.</small></div></div>
+    </section>
+    <section class="export-panel panel">
+      <div><p class="eyebrow">NEXT STOP: YOUR SCENE</p><h2>From real life to Blender.</h2><p>RTMW3D creates a ready-to-open Blender scene automatically. Capture JSON is also available.</p></div>
+      <div class="export-actions"><button id="blendButton" class="button primary" hidden>Download Blender scene ↓</button><button id="exportButton" class="button primary" disabled>Download capture <span>↓</span></button><a class="button secondary" href="blender_importer.py" download>Blender importer ↓</a></div>
+    </section>
+    <section id="workflow" class="workflow">
+      <article><span>01</span><h3>Start with clear footage</h3><p>One person, good lighting, and a steady camera. Keep the full body and fingers visible.</p></article>
+      <article><span>02</span><h3>Extract the performance</h3><p>AI estimates movement on your device. Models download when you first run a capture.</p></article>
+      <article><span>03</span><h3>Open your Blender scene</h3><p>With RTMW3D, download the generated .blend and open it. No importer script or terminal commands needed.</p></article>
+    </section>
+    <footer><span>FRAMECRAFT <span class="muted">/</span> MOTION CAPTURE STUDIO</span><p>Single-camera estimates · Optional ground-based root travel · Character retargeting is a separate step</p></footer>
+  </main>
+  <script type="module" src="app.mjs"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+node_modules/
+__pycache__/
+test-results/
+playwright-report/
+*.mocap.json
+.third-party/
+.venv-gvhmr/
+.gvhmr-runs/
+.venv-rtmw3d/
+.models/
+.rtmw3d-runs/
+*.tracking.json
+*.gvhmr.json
+*.blend

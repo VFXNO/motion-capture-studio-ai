@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GVHMR setup — Framecraft</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .setup { max-width: 900px; margin: 40px auto; padding: 0 22px; }
+    .setup .panel { padding: 26px; margin: 22px 0; }
+    .setup h1 { font-size: clamp(30px, 6vw, 46px); }
+    .setup h2 { margin-bottom: 14px; }
+    .setup p, .setup li { line-height: 1.7; margin-bottom: 12px; }
+    .setup a { color: #c1afff; text-decoration: underline; }
+    .setup pre { padding: 16px; overflow-x: auto; background: #101217; border-radius: 8px; }
+    .setup code { font-size: 13px; overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="./">f / framecraft</a><span class="beta">OPTIONAL PYTHON BACKEND</span></header>
+  <main class="setup">
+    <p class="eyebrow">NATIVE BODY ROTATIONS + WORLD TRAVEL</p>
+    <h1>GVHMR model setup.</h1>
+    <p>A video-sequence body model from Zhejiang University's 3D Vision Group. Runs locally on a GPU, separately from the browser engine.</p>
+    <section class="panel">
+      <h2>Not running in the browser yet.</h2>
+      <p>The studio's <strong>Extract motion</strong> button runs the selected engine: automatic <strong>RTMW3D-X</strong> by default, or <strong>MediaPipe</strong> when chosen. GVHMR is separate and uses the command below after you provide licensed files. There is no silent fallback or cloud upload.</p>
+      <p>Basic AMD GPU operators and headless imports have been tested. <strong>Pretrained GVHMR inference on this machine is not verified</strong> until all checkpoints are supplied and a real capture succeeds.</p>
+      <p><strong>Body and root only.</strong> GVHMR does not supply articulated fingers or facial expressions, and existing hand/face captures are not automatically merged.</p>
+    </section>
+    <section class="panel">
+      <h2>1 / Review licenses and get the files.</h2>
+      <p>GVHMR's published license is <strong>research/non-commercial</strong>. Body models and component weights have their own terms. Framecraft cannot accept them for you.</p>
+      <ul>
+        <li><a href="https://github.com/zju3dv/GVHMR/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">GVHMR license</a></li>
+        <li><a href="https://smpl-x.is.tue.mpg.de/" target="_blank" rel="noopener noreferrer">SMPL-X registration/download</a> — neutral NPZ body model</li>
+        <li><a href="https://github.com/zju3dv/GVHMR/blob/main/docs/INSTALL.md" target="_blank" rel="noopener noreferrer">Official GVHMR checkpoint downloads</a> — GVHMR, HMR2.0a, ViTPose huge, YOLOv8x</li>
+      </ul>
+      <p>Place the five files under <code>.third-party/GVHMR/inputs/checkpoints/</code> as described in the <a href="GVHMR%20Setup.md" download>full setup checklist ↓</a>. No account credentials are needed by this app.</p>
+    </section>
+    <section class="panel">
+      <h2>2 / Check the local environment.</h2>
+      <p>Open PowerShell in your <code>motion-capture-studio</code> folder:</p>
+      <pre><code>.venv-gvhmr\Scripts\python.exe tools/gvhmr.py doctor --probe</code></pre>
+      <p>The doctor lists missing files and tests GPU operations/imports. Passing prerequisites is not proof that pretrained inference or accuracy has been verified.</p>
+    </section>
+    <section class="panel">
+      <h2>3 / Capture, then import into Blender.</h2>
+      <pre><code>.venv-gvhmr\Scripts\python.exe tools/gvhmr.py run 'input.mp4' 'new-dance.gvhmr.json' --static-camera --accept-noncommercial --trust-checkpoints</code></pre>
+      <p>Read the checklist before using the acknowledgement flags. Pickle checkpoints can execute code; use only trusted official files. Omit <code>--static-camera</code> if the camera moves. Use one performer, up to 60 seconds. Input timestamps are resampled to 30 fps.</p>
+      <p>Import the new <code>.gvhmr.json</code> with the <a href="blender_importer.py" download>updated Blender importer ↓</a>. Native body rotations and world travel are preserved; originals are not overwritten. Character retargeting remains separate.</p>
+    </section>
+    <p><a href="./">← Back to the browser studio</a></p>
+  </main>
+</body>
+</html>

@@ -1,0 +1,21 @@
+diff --git a/hmr4d/utils/geo_transform.py b/hmr4d/utils/geo_transform.py
+--- a/hmr4d/utils/geo_transform.py
++++ b/hmr4d/utils/geo_transform.py
+@@ -4,7 +4,6 @@ import torch
+ import torch.nn.functional as F
+ from pytorch3d.transforms import so3_exp_map, so3_log_map
+ from pytorch3d.transforms import matrix_to_quaternion, quaternion_to_axis_angle, matrix_to_rotation_6d
+-import pytorch3d.ops.knn as knn
+ from hmr4d.utils.pylogger import Log
+ from pytorch3d.transforms import euler_angles_to_matrix
+ import hmr4d.utils.matrix as matrix
+@@ -293,6 +292,9 @@ def get_nearby_points(points, query_verts, padding=0.0, p=1):
+         idx = (((points - min_xyz) > 0).all(dim=-1) * ((points - max_xyz) < 0).all(dim=-1)).nonzero().squeeze(-1)
+         nearby_points = points[idx]
+     elif p == 2:
++        # Framecraft headless inference never uses this compiled mesh helper.
++        # Keep its dependency lazy instead of replacing it with a dummy op.
++        import pytorch3d.ops.knn as knn
+         squared_dist, _, _ = knn.knn_points(points[None], query_verts[None], K=1, return_nn=False)
+         mask = squared_dist[0, :, 0] < padding**2  # (S,)
+         nearby_points = points[mask]
