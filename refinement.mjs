@@ -61,8 +61,10 @@ export function refineCaptureFrames(frames, {strength = .35} = {}) {
       flush();
     }
   }
-  track(f => f.body?.landmarks, 33, .08);
-  track(f => f.body?.world, 33, .18);
+  // A learned temporal body already carries a coherent body17/body33 pair.
+  // Filtering only body33 would distort limbs relative to the untouched torso.
+  track(f => f.body?.pose17 ? undefined : f.body?.landmarks, 33, .08);
+  track(f => f.body?.pose17 ? undefined : f.body?.world, 33, .18);
   for (const side of ['Left', 'Right']) {
     track(f => f.hands?.find(hand => hand.side === side)?.landmarks, 21, .08);
     track(f => f.hands?.find(hand => hand.side === side)?.world, 21, .07);

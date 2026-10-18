@@ -5,7 +5,7 @@ import math
 from pathlib import Path
 import time
 
-from .models import download_models
+from .models import download_models, download_body2d
 from .runtime import load_models, REVISION
 
 
@@ -59,7 +59,11 @@ def capture_video(args, root):
     samples = sample_video(args.video, args.fps, args.frames)
     info = next(samples)
     pose_path, detector_path = download_models(root / ".models/rtmw3d")
-    pose, detector = load_models(root, pose_path, detector_path, args.device)
+    temporal = getattr(args, "body_model", "temporal") == "temporal"
+    if temporal:
+        pose, detector, body2d = load_models(root, pose_path, detector_path, args.device, download_body2d(root / ".models/rtmw3d"))
+    else:
+        pose, detector = load_models(root, pose_path, detector_path, args.device)
     frames, previous = [], None
     started = time.monotonic()
     for index, (timestamp, decoded_time, image) in enumerate(samples):
@@ -71,6 +75,11 @@ def capture_video(args, root):
             if keypoints.shape != (1, 133, 3) or not np.isfinite(keypoints).all() or not np.isfinite(scores).all():
                 raise ValueError("Invalid RTMW3D inference output.")
             record.update({"bbox": box.tolist(), "keypoints": np.column_stack((pixel[0], keypoints[0, :, 2], scores[0])).tolist()})
+            if temporal:
+                xy, confidence = body2d(image, [box])
+                if xy.shape != (1, 17, 2) or not np.isfinite(xy).all() or not np.isfinite(confidence).all():
+                    raise ValueError("Invalid RTMPose-X body detections.")
+                record["body2d"] = np.column_stack((xy[0], np.clip(confidence[0], 0, 1))).tolist()
         frames.append(record)
         if index % 12 == 0 or index + 1 == info["samples"]:
             print(f"RTMW3D {index + 1}/{info['samples']}; {time.monotonic() - started:.1f}s; actor={'tracked' if box is not None else 'missing'}", flush=True)
@@ -81,7 +90,12 @@ def capture_video(args, root):
                          "device": args.device, "provider": pose.session.get_providers(), "sourceRevision": REVISION,
                          "heightMeters": args.height, "fov": args.fov, "createdAt": datetime.now(timezone.utc).isoformat(),
                          "coordinates": "Native COCO-WholeBody 133: [image_x_px, image_y_px, hip-relative_depth_m, score]. No global trajectory inferred."},
-            "frames": frames}
+             "frames": frames}
+    if temporal:
+        data["metadata"]["bodyDetector"] = "rtmpose-x-body7"
+        from .temporal import add_temporal_body
+        print("Estimating temporal body with MotionAGFormer-B on CPU", flush=True)
+        data = add_temporal_body(data, root)
     with Path(args.output).open("x", encoding="utf8") as handle:
         json.dump(data, handle, allow_nan=False, separators=(",", ":"))
     print(f"Saved native model predictions: {args.output}", flush=True)

@@ -17,7 +17,7 @@ def decode_depth(simcc_z):
     return (simcc_z / 144.0 - 1.0) * Z_RANGE
 
 
-def load_models(root, pose_path, detector_path, device):
+def load_models(root, pose_path, detector_path, device, body_path=None):
     import onnxruntime as ort
 
     repo = Path(root) / ".third-party/rtmlib"
@@ -25,7 +25,7 @@ def load_models(root, pose_path, detector_path, device):
     if revision != REVISION:
         raise ValueError("Unexpected rtmlib revision; use the pinned setup script in a clean clone.")
     sys.path.insert(0, str(repo))
-    from rtmlib import RTMPose3d, YOLOX
+    from rtmlib import RTMPose3d, RTMPose, YOLOX
 
     provider = "DmlExecutionProvider" if device == "dml" else "CPUExecutionProvider"
     if provider not in ort.get_available_providers():
@@ -62,4 +62,11 @@ def load_models(root, pose_path, detector_path, device):
             initialize(self, detector_path, (640, 640))
             self.det_mode, self.nms_thr, self.score_thr = "human", .45, .5
 
+    class Body2D(RTMPose):
+        def __init__(self):
+            initialize(self, body_path, (288, 384), (123.675, 116.28, 103.53), (58.395, 57.12, 57.375))
+            self.to_openpose = False
+
+    if body_path is not None:
+        return Pose(), Detector(), Body2D()
     return Pose(), Detector()

@@ -22,6 +22,50 @@ def capture():
                         "face": {"landmarks": points(478), "blendshapes": {"eyeBlinkLeft": 0.5}}}]}
 
 
+def hand():
+    world = [{"x": 0, "y": 0, "z": 0, "visibility": .9} for _ in range(21)]
+    for finger, start in enumerate((1, 5, 9, 13, 17)):
+        for segment in range(4):
+            world[start + segment].update(x=(finger - 2) * .017, y=.055 + segment * .025)
+    return {"side": "Right", "world": world, "score": .9}
+
+
+class HandGeometryTest(unittest.TestCase):
+    def test_confidence_does_not_allow_impossible_hand_geometry(self):
+        good = hand()
+        self.assertIsNotNone(importer.hand_measurements(good))
+        bad = copy.deepcopy(good)
+        bad["world"][2]["z"] = .8
+        self.assertIsNone(importer.hand_measurements(bad))
+        bad = copy.deepcopy(good)
+        bad["world"][4] = dict(bad["world"][3])
+        self.assertIsNone(importer.hand_measurements(bad))
+        bad = copy.deepcopy(good)
+        bad["world"][20]["visibility"] = .1
+        self.assertIsNone(importer.hand_measurements(bad))
+
+    def test_rest_hand_uses_valid_clip_lengths_not_the_first_occluded_sample(self):
+        bad = hand()
+        bad["world"][2]["z"] = .8
+        frames = [{"time": i / 24, "hands": [bad if i == 0 else hand()]} for i in range(6)]
+        profiles = importer.hand_profiles(frames, {})
+        self.assertGreater(profiles["Right"]["frame"]["time"], 0)
+        self.assertAlmostEqual(profiles["Right"]["lengths"][(1, 2)], .025)
+        self.assertFalse(importer.usable_hand(bad, profiles["Right"]))
+        self.assertTrue(importer.usable_hand(hand(), profiles["Right"]))
+        self.assertEqual(importer.hand_profiles(frames[:1], {}), {})
+
+    def test_scaled_hands_and_low_confidence_hands(self):
+        scaled = hand()
+        for p in scaled["world"]:
+            for axis in ("x", "y", "z"):
+                p[axis] *= 1.4
+        measured = importer.hand_measurements(scaled, 1.4)
+        self.assertAlmostEqual(measured[(1, 2)], .035)
+        scaled["score"] = .2
+        self.assertIsNone(importer.hand_measurements(scaled, 1.4))
+
+
 class CaptureValidationTest(unittest.TestCase):
     def test_ground_root_schema_and_backward_compatibility(self):
         data = capture()
@@ -55,6 +99,29 @@ class CaptureValidationTest(unittest.TestCase):
     def test_valid_body_hands_face(self):
         data = capture()
         self.assertIs(importer.validate_capture(data), data)
+
+    def test_projection_metadata_and_centers_validated_before_import(self):
+        data = capture()
+        data["metadata"].update(engine="rtmw3d-x", poseFitting={"method": "image-constrained-limbs-v1"},
+                                calibration={"camera": {"width": 1280, "height": 720, "focal": 1100}})
+        data["frames"][0]["body"]["landmarks"] = points(33)
+        data["frames"][0]["projection"] = {"cameraCenter": {"x": 0, "y": 0, "z": 3}}
+        importer.validate_capture(data)
+        for mutate in (
+            lambda c: c["metadata"].update(poseFitting={"method": "other"}),
+            lambda c: c["metadata"].update(calibration=None),
+            lambda c: c["metadata"]["calibration"]["camera"].update(focal=float("nan")),
+            lambda c: c["metadata"]["calibration"]["camera"].update(width=720),
+            lambda c: c["frames"][0].pop("projection"),
+            lambda c: c["frames"][0]["projection"]["cameraCenter"].update(z=-1),
+            lambda c: c["frames"][0]["body"].pop("landmarks"),
+            lambda c: c["frames"][0]["body"]["landmarks"][11].update(visibility="high"),
+            lambda c: c["frames"].append({"time": 1, "body": None, "projection": {"cameraCenter": None}}),
+        ):
+            broken = copy.deepcopy(data)
+            mutate(broken)
+            with self.assertRaises(ValueError):
+                importer.validate_capture(broken)
 
     def test_missing_detections_allowed(self):
         data = capture()

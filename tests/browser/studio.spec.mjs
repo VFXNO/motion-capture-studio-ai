@@ -95,7 +95,7 @@ test('video decoding, complete capture, scrubbing, and versioned export', async 
 test('RTMW3D is default and its guide requires no setup commands', async ({page}) => {
   await page.goto('/');
   await expect(page.locator('#captureEngine')).toHaveValue('rtmw3d');
-  await page.getByRole('link', {name:/RTMW3D-X/}).click();
+  await page.getByRole('link', {name:/Temporal body \+ RTMW3D/}).click();
   await expect(page.getByRole('heading', {level:1})).toContainText('Just choose your video');
   await expect(page.getByRole('heading', {name:'No terminal commands. No manual model setup.'})).toBeVisible();
   await expect(page.getByText('Absolute scale and travel are still estimated.')).toBeVisible();

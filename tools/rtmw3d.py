@@ -17,6 +17,11 @@ def main():
     run.add_argument("output", type=Path, help="New raw .tracking.json, for the Node export step")
     run.add_argument("--fps", type=int, choices=(12, 24, 30), default=24)
     run.add_argument("--device", choices=("dml", "cpu"), default="dml")
+    run.add_argument("--body-model", choices=("temporal", "legacy"), default="temporal",
+                     help="Temporal MotionAGFormer body (default), or explicit legacy framewise RTMW3D")
+    lift = commands.add_parser("lift", help="Run temporal body on saved native detections without re-decoding video")
+    lift.add_argument("tracking", type=Path)
+    lift.add_argument("output", type=Path)
     run.add_argument("--frames", type=int, help="Optional first N samples for an inference smoke test")
     run.add_argument("--height", type=float, default=1.7, help="Approximate actor height in meters; used only for estimated scale/depth")
     run.add_argument("--fov", type=float, default=60, help="Approximate horizontal camera FOV, degrees")
@@ -28,6 +33,19 @@ def main():
     from backends.rtmw3d.models import download_models
     if args.command == "download":
         print(download_models(ROOT / ".models/rtmw3d"))
+        from backends.rtmw3d.models import download_body2d
+        print(download_body2d(ROOT / ".models/rtmw3d"))
+        from backends.rtmw3d.temporal import download_model
+        print(download_model(ROOT / ".models/rtmw3d"))
+        return 0
+    if args.command == "lift":
+        import json
+        from backends.rtmw3d.temporal import add_temporal_body
+        if not args.tracking.is_file() or args.output.exists():
+            parser.error("Tracking must exist; output must be a NEW file.")
+        result = add_temporal_body(json.loads(args.tracking.read_text(encoding="utf8")), ROOT)
+        with args.output.open("x", encoding="utf8") as output:
+            json.dump(result, output, allow_nan=False, separators=(",", ":"))
         return 0
     if not args.video.is_file() or args.output.exists():
         parser.error("Video must exist; output must be a NEW file. No originals are overwritten.")

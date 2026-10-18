@@ -175,7 +175,7 @@ class JobManager:
                     if match and not job.cancelled.is_set():
                         index, count = map(int, match.groups())
                         job.update(message=f"Tracking frame {index} of {count}", progress=.1 + .7 * index / max(1, count))
-                    elif clean.startswith(("Downloading", "Installing", "Creating isolated", "RTMW3D ready")):
+                    elif clean.startswith(("Downloading", "Installing", "Creating isolated", "RTMW3D ready", "Estimating temporal", "Temporal body")):
                         job.update(message=clean[:240])
             code = process.wait()
         finally:
@@ -193,7 +193,7 @@ class JobManager:
             if job.cancelled.is_set(): raise InterruptedError()
             job.update("preparing", "Preparing local AI automatically; first use downloads models", .02)
             self._command(job, [sys.executable, "-u", self.root / "tools/rtmw3d.py", "setup"])
-            job.update("tracking", "Running RTMW3D-X locally", .1)
+            job.update("tracking", "Running RTMW3D detections + MotionAGFormer temporal body locally", .1)
             python = self.root / ".venv-rtmw3d" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
             self._command(job, [python, "-u", self.root / "tools/rtmw3d.py", "run", job.video, job.tracking,
                                 "--fps", job.options["fps"], "--height", job.options["height"],

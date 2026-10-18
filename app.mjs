@@ -333,7 +333,7 @@ async function extractMotion() {
         options: {filename: sourceFile.name, duration: video.duration, fps, height: Number($('actorHeight').value),
           fov: rootOptions.fov, device: $('computeDevice').value, makeBlend: $('createBlend').checked},
         onProgress: state => {
-          status('Capturing with RTMW3D-X', state.message);
+          status('Capturing with local temporal AI', state.message);
           $('progress').value = state.progress ?? 0;
           $('progressText').textContent = `${Math.round((state.progress ?? 0) * 100)}%`;
         },

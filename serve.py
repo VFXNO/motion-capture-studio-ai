@@ -88,7 +88,7 @@ class StudioHandler(SimpleHTTPRequestHandler):
         manager = self.server.jobs
         if self.command == "GET" and path == "/api/session":
             self._json({"token": self.server.api_token, "automaticSetup": True,
-                        "installed": (ROOT / ".venv-rtmw3d/Scripts/python.exe").is_file() and (ROOT / ".models/rtmw3d/rtmw3d-x.onnx").is_file(),
+                        "installed": (ROOT / ".venv-rtmw3d/Scripts/python.exe").is_file() and all((ROOT / ".models/rtmw3d" / name).is_file() for name in ("rtmw3d-x.onnx", "rtmpose-x-body7.onnx", "motionagformer-b-243.onnx")),
                         "blenderAvailable": bool(manager.blender)})
             return
         self._authenticate()

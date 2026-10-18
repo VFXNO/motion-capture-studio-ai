@@ -22,6 +22,7 @@ export function hipCenter(body) {
 }
 
 export function estimateCameraTranslation(body, {width, height, fov = 60}) {
+  if(body?.pose17) return estimateOrthographicTranslation(body,{width,height,fov});
   const center = hipCenter(body);
   if (!center || !visible(body.landmarks?.[23]) || !visible(body.landmarks?.[24])) return null;
   const focal = width / (2 * Math.tan(fov * Math.PI / 360));
@@ -75,6 +76,40 @@ export function estimateCameraTranslation(body, {width, height, fov = 60}) {
   return {position, confidence: Math.max(0, 1 - rms / 0.08) * Math.min(1, rows.length / 10)};
 }
 
+export function estimateOrthographicTranslation(body,{width,height,fov=60}) {
+  // Temporal lifting predicts camera-relative joints under scaled orthographic
+  // training projections. Fitting perspective directly exaggerates limb depth.
+  const center=hipCenter(body);
+  if(!center) return null;
+  const rows=JOINTS.flatMap(index=>{
+    const p=body.world[index],q=body.landmarks[index];
+    return visible(q)&&validPoint(p)?[{x:p.x-center.x,y:p.y-center.y,u:q.x*width,v:q.y*height,
+      weight:q.visibility??1,base:q.visibility??1}]:[];
+  });
+  if(rows.length<6) return null;
+  let solution;
+  for(let pass=0;pass<4;pass++) {
+    const total=rows.reduce((s,r)=>s+r.weight,0);
+    const average=key=>rows.reduce((s,r)=>s+r[key]*r.weight,0)/total;
+    const x=average('x'),y=average('y'),u=average('u'),v=average('v');
+    const denominator=rows.reduce((s,r)=>s+r.weight*((r.x-x)**2+(r.y-y)**2),0);
+    if(denominator<1e-6) return null;
+    const scale=rows.reduce((s,r)=>s+r.weight*((r.x-x)*(r.u-u)+(r.y-y)*(r.v-v)),0)/denominator;
+    if(!Number.isFinite(scale)||scale<10) return null;
+    solution={scale,tx:u-scale*x,ty:v-scale*y};
+    const errors=rows.map(r=>Math.hypot(r.u-(scale*r.x+solution.tx),r.v-(scale*r.y+solution.ty)));
+    const threshold=Math.max(4,2.5*median(errors));
+    rows.forEach((r,i)=>r.weight=r.base*Math.min(1,threshold/Math.max(1e-9,errors[i])));
+  }
+  const {scale,tx,ty}=solution;
+  const focal=width/(2*Math.tan(fov*Math.PI/360));
+  const position={x:(tx-width/2)/scale,y:(ty-height/2)/scale,z:focal/scale};
+  if(position.z<.4||position.z>50) return null;
+  const rms=Math.sqrt(rows.reduce((s,r)=>s+r.weight*((r.u-scale*r.x-tx)**2+(r.v-scale*r.y-ty)**2),0)/rows.reduce((s,r)=>s+r.weight,0))/Math.max(width,height);
+  if(rms>.08) return null;
+  return {position,confidence:Math.max(0,1-rms/.08),pixelsPerMeter:scale,cameraModel:'scaled-orthographic'};
+}
+
 function localFeet(body, pitch) {
   const center = hipCenter(body);
   const result = {};
@@ -96,6 +131,10 @@ export function reconstructRootMotion(frames, options) {
   const info = {enabled: false, method: 'grounded-perspective-v1', fov, pitch, stabilize,
     coordinates: 'Blender Z-up, X camera-right, Y away along floor; estimated meters; Z is hip height above floor',
     assumptions: 'Fixed camera, flat floor, no camera roll. Scale and depth are monocular estimates.'};
+  if(frames.some(f=>f.body?.pose17)) {
+    info.cameraModel='scaled-orthographic';
+    info.assumptions='Temporal-body scaled-orthographic translation; depth estimated from FOV and projected size. Fixed camera, flat floor; not learned world travel.';
+  }
   const raw = frames.map(frame => {
     if (!frame.body) return null;
     const solved = estimateCameraTranslation(frame.body, {width, height, fov});

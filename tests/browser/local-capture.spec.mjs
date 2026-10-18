@@ -12,9 +12,22 @@ function nativeFixture() {
     [[.08,-.7,0],[.2,-.5,0],[.35,-.25,0],[.4,0,-.05],[.12,0,0],[.12,.42,.06],[.12,.84,0],[.12,.9,-.15],[.15,.9,-.15],[.12,.9,.04]]
       .forEach((p,i)=>{local[indices[i]]=[p[0]*sign,p[1],p[2]];});
   }
+  for(const [start,wrist,sign] of [[91,9,1],[112,10,-1]]) {
+    local[start]=[...local[wrist]];
+    for(const [f,base] of [1,5,9,13,17].entries()) {
+      for(let j=0;j<4;j++) local[start+base+j]=local[wrist].map((v,axis)=>v+
+        (axis===0 ? sign*(f-2)*.017 : axis===1 ? .055+j*.025 : 0));
+    }
+  }
+  const model=Array.from({length:17},()=>[0,0,0]);
+  for(const [a,b] of [[4,11],[1,12],[5,13],[2,14],[6,15],[3,16],[11,5],[14,6],[12,7],[15,8],[13,9],[16,10]]) model[a]=local[b];
+  model[7]=[0,-.25,0]; model[8]=[0,-.5,0]; model[9]=[0,-.6,0]; model[10]=[0,-.75,0];
   return {format:'framecraft-rtmw3d-tracking',version:1,
-    metadata:{width,height,fps:24,heightMeters:1.7,fov:60,engine:'rtmw3d-x'},
-    frames:Array.from({length:24},(_,i)=>({time:i/24,keypoints:local.map(([x,y,z])=>[(x+i*.008)*focal/(3+i*.005+z)+width/2,y*focal/(3+i*.005+z)+height/2,z,.9])}))};
+    metadata:{width,height,fps:24,heightMeters:1.7,fov:60,engine:'rtmw3d-x',bodyEstimator:{model:'motionagformer-b',layout:'h36m17'}},
+    frames:Array.from({length:24},(_,i)=>{
+      const keypoints=local.map(([x,y,z])=>[(x+i*.008)*focal/(3+i*.005+z)+width/2,y*focal/(3+i*.005+z)+height/2,z,.9]);
+      return {time:i/24,keypoints,temporalBody:model,body2d:keypoints.slice(0,17).map(p=>[p[0],p[1],p[3]])};
+    })};
 }
 
 async function mockLocal(page,{fail=false,wait=false}={}) {
@@ -52,7 +65,12 @@ test('one click runs automatic setup/capture/export and downloads a Blender scen
   await expect(page.locator('#rootPreviewPanel')).toBeVisible();
   expect(mock.options.makeBlend).toBe(true);
   expect(mock.exported.metadata.engine).toBe('rtmw3d-x');
+  expect(mock.exported.metadata.bodyEstimator.model).toBe('motionagformer-b');
+  expect(mock.exported.metadata.poseFitting).toBeUndefined();
+  expect(mock.exported.frames[0].projection.model).toBe('scaled-orthographic');
+  expect(mock.exported.frames[0].projection.cameraCenter.z).toBeGreaterThan(.1);
   expect(mock.exported.frames[0].face.world).toHaveLength(68);
+  expect(mock.exported.frames[0].hands).toHaveLength(2);
   expect(mock.workerRequests).toBe(0);
   const downloadEvent=page.waitForEvent('download');
   await page.locator('#blendButton').click();
@@ -102,6 +120,10 @@ test('real RTMW3D video to downloadable Blender scene without manual commands',a
   const response=await captured;
   const capture=await response.json();
   expect(capture.metadata.engine).toBe('rtmw3d-x');
+  expect(capture.metadata.bodyEstimator.model).toBe('motionagformer-b');
+  expect(capture.metadata.bodyEstimator.bodyDetector).toBe('rtmpose-x-body7');
+  expect(capture.metadata.poseFitting).toBeUndefined();
+  expect(capture.frames.find(f=>f.body).projection.model).toBe('scaled-orthographic');
   expect(capture.frames.length).toBeGreaterThan(2);
   expect(capture.rootMotion.enabled).toBe(true);
   await expect(page.locator('#blendButton')).toBeVisible();
