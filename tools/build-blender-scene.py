@@ -45,7 +45,7 @@ notes.write("Created automatically in a new scene. Existing Blender sessions/sce
             + ("RTMPose-X body detections -> MotionAGFormer-B temporal 3D body. RTMW3D fingers/face68/foot details; no expression scores.\n" if temporal_body else "RTMW3D-X: body/fingers and native face68; no expression scores.\n")
             + "Ground travel/scale are estimates, not learned global motion.\n"
             "Hand safety: reject implausible depths; use clip-wide median finger lengths and connected chains. Missing/rejected hand detections hold their last local pose, not recovered hidden motion.\n"
-            + ("Importer 0.7.0: temporal body directions retained with fixed limb lengths. No image-ray depth-branch solver; no extra body-target smoothing.\n" if temporal_body else "Legacy capture: image-constrained or 3D-target limb fitting according to metadata.\n")
+            + ("Importer 0.7.1: body17 directions retained with fixed limb lengths. Observed-arm refinement, when identified in metadata, uses detected arm vectors with neural depth priors before rig construction. No extra importer body-target smoothing.\n" if temporal_body else "Legacy capture: image-constrained or 3D-target limb fitting according to metadata.\n")
             +
             "Motion cleanup controls temporal cleanup; 0 disables the cleanup pass, not geometry safeguards. Root/face samples are not modified by the importer.\n"
             "Framecraft Source View is an animated pose-comparison camera, not recovered camera motion. Temporal captures use scaled orthographic projection, consistent with the lifter. Numpad 0 switches the comparison view. No source video is embedded.\n"

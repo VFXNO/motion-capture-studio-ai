@@ -23,10 +23,10 @@ function nativeFixture() {
   for(const [a,b] of [[4,11],[1,12],[5,13],[2,14],[6,15],[3,16],[11,5],[14,6],[12,7],[15,8],[13,9],[16,10]]) model[a]=local[b];
   model[7]=[0,-.25,0]; model[8]=[0,-.5,0]; model[9]=[0,-.6,0]; model[10]=[0,-.75,0];
   return {format:'framecraft-rtmw3d-tracking',version:1,
-    metadata:{width,height,fps:24,heightMeters:1.7,fov:60,engine:'rtmw3d-x',bodyEstimator:{model:'motionagformer-b',layout:'h36m17'}},
+    metadata:{width,height,fps:24,heightMeters:1.7,fov:60,engine:'rtmw3d-x',bodyEstimator:{model:'motionagformer-b',layout:'h36m17',refinement:{method:'observed-arms-neural-depth-v1'}}},
     frames:Array.from({length:24},(_,i)=>{
       const keypoints=local.map(([x,y,z])=>[(x+i*.008)*focal/(3+i*.005+z)+width/2,y*focal/(3+i*.005+z)+height/2,z,.9]);
-      return {time:i/24,keypoints,temporalBody:model,body2d:keypoints.slice(0,17).map(p=>[p[0],p[1],p[3]])};
+      return {time:i/24,keypoints,temporalBody:model,refinedBody:model,body2d:keypoints.slice(0,17).map(p=>[p[0],p[1],p[3]])};
     })};
 }
 
@@ -122,6 +122,7 @@ test('real RTMW3D video to downloadable Blender scene without manual commands',a
   expect(capture.metadata.engine).toBe('rtmw3d-x');
   expect(capture.metadata.bodyEstimator.model).toBe('motionagformer-b');
   expect(capture.metadata.bodyEstimator.bodyDetector).toBe('rtmpose-x-body7');
+  expect(capture.metadata.bodyEstimator.refinement.method).toBe('observed-arms-neural-depth-v1');
   expect(capture.metadata.poseFitting).toBeUndefined();
   expect(capture.frames.find(f=>f.body).projection.model).toBe('scaled-orthographic');
   expect(capture.frames.length).toBeGreaterThan(2);

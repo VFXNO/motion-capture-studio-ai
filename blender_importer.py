@@ -11,7 +11,7 @@ from pathlib import Path
 
 bl_info = {
     "name": "Framecraft Motion Capture", "author": "Framecraft",
-    "version": (0, 7, 0), "blender": (4, 2, 0),
+    "version": (0, 7, 1), "blender": (4, 2, 0),
     "location": "File > Import", "category": "Import-Export",
     "description": "Import body/finger animation, facial wire mesh, and expression scores",
 }
@@ -1194,10 +1194,12 @@ def import_capture(context, data, start_frame=1, frame_step=1, include_face=True
         rig["capture_temporal_notes"] = "Centered pose-target cleanup, minimum-twist aiming, quaternion hand filtering and eased re-acquisition; fixed-length IK follows cleanup. Root/face samples are unchanged." if temporal_strength else "Temporal rig cleanup disabled."
         if model_body:
             rig["capture_temporal_notes"] = "MotionAGFormer-B overlapping temporal inference; learned 3D body directions retained. No image-ray branch solver or additional body-target smoothing. RTMW3D hand cleanup and bounded native foot-tip directions remain separate."
+            if metadata["bodyEstimator"].get("refinement"):
+                rig["capture_temporal_notes"] = "Observed arm vectors corrected using detector confidence/agreement and neural depth priors; continuous sequence depth transitions. Neural torso/legs retained; native hand/foot cleanup is separate. No additional body-target smoothing."
         rig["capture_root_status"] = "Ground travel is animated on parent Framecraft Root" if rooted else "IN PLACE: root track absent or root import disabled"
         rig["capture_fitting"] = "Median limb lengths; two-bone fitting; measured torso yaw; support-foot anchors" if improve_fit else "Legacy aim-only fitting"
         if model_body and improve_fit:
-            rig["capture_fitting"] = "Learned body17 directions with clip-median limb lengths; support-foot constraints. No image-ray depth-branch fitting."
+            rig["capture_fitting"] = "Body17 directions (observed-arm refinement when present) with clip-median limb lengths; support-foot constraints. No importer image-ray depth-branch fitting."
         rig["capture_notes"] = ("Ground travel is on parent Framecraft Root. " if rooted else "In-place single-camera estimates. ") + "Missing tracks hold their last pose. Bone twist and camera trajectory are not recovered. Retarget separately."
         if context.object and context.object.mode != "OBJECT":
             bpy.ops.object.mode_set(mode="OBJECT")

@@ -1,7 +1,7 @@
-"""Ensure evaluated temporal-rig arm directions preserve the learned 3D pose.
+"""Ensure evaluated temporal-rig arm directions preserve the exported 3D pose.
 
 Run against a saved temporal .blend with its matching capture JSON as argument.
-This checks transport, not whether the model predicts ground-truth motion.
+This checks raw/refined body17 transport, not ground-truth motion accuracy.
 """
 import json
 import math

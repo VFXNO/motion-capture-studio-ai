@@ -44,6 +44,8 @@ def main():
         if not args.tracking.is_file() or args.output.exists():
             parser.error("Tracking must exist; output must be a NEW file.")
         result = add_temporal_body(json.loads(args.tracking.read_text(encoding="utf8")), ROOT)
+        from backends.rtmw3d.arm_refinement import refine_tracking_arms
+        result = refine_tracking_arms(result)
         with args.output.open("x", encoding="utf8") as output:
             json.dump(result, output, allow_nan=False, separators=(",", ":"))
         return 0

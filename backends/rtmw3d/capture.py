@@ -96,6 +96,9 @@ def capture_video(args, root):
         from .temporal import add_temporal_body
         print("Estimating temporal body with MotionAGFormer-B on CPU", flush=True)
         data = add_temporal_body(data, root)
+        from .arm_refinement import refine_tracking_arms
+        print("Refining observed arms with neural depth priors", flush=True)
+        data = refine_tracking_arms(data)
     with Path(args.output).open("x", encoding="utf8") as handle:
         json.dump(data, handle, allow_nan=False, separators=(",", ":"))
     print(f"Saved native model predictions: {args.output}", flush=True)

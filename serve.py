@@ -16,7 +16,7 @@ from local_jobs import JobError, JobManager
 ROOT = Path(__file__).parent
 STATIC_FILES = {"index.html", "styles.css", "root-motion.css", "repair.css", "app.mjs", "local-capture.mjs", "rtmw3d.worker.mjs",
                 "core.mjs", "tracker.worker.mjs", "root-motion.mjs", "refinement.mjs",
-                "blender_importer.py", "gvhmr.html", "GVHMR Setup.md", "README.md",
+                "blender_importer.py", "framecraft_rigify.py", "RIGIFY.md", "gvhmr.html", "GVHMR Setup.md", "README.md",
                 "rtmw3d.html", "RTMW3D.md", "backends/rtmw3d/motion.mjs"}
 MAX_VIDEO = 512 * 1024 * 1024
 MAX_CAPTURE = 128 * 1024 * 1024

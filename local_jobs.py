@@ -175,7 +175,7 @@ class JobManager:
                     if match and not job.cancelled.is_set():
                         index, count = map(int, match.groups())
                         job.update(message=f"Tracking frame {index} of {count}", progress=.1 + .7 * index / max(1, count))
-                    elif clean.startswith(("Downloading", "Installing", "Creating isolated", "RTMW3D ready", "Estimating temporal", "Temporal body")):
+                    elif clean.startswith(("Downloading", "Installing", "Creating isolated", "RTMW3D ready", "Estimating temporal", "Temporal body", "Refining observed")):
                         job.update(message=clean[:240])
             code = process.wait()
         finally:

@@ -138,6 +138,8 @@ for(const [start,end,closed] of [[0,16,false],[17,21,false],[22,26,false],[27,30
 export function buildCapture(tracking, {pitch=10,cleanupStrength=.25,stabilize=true,rootEnabled=true}={}) {
   const m=tracking?.metadata;
   const temporal=m?.bodyEstimator?.model==='motionagformer-b';
+  const refined=m?.bodyEstimator?.refinement?.method==='observed-arms-neural-depth-v1';
+  if(m?.bodyEstimator?.refinement && !refined) throw new Error('Unsupported temporal arm refinement.');
   if(m?.bodyEstimator && !temporal) throw new Error('Unsupported temporal body model.');
   if(tracking?.format!=='framecraft-rtmw3d-tracking'||tracking.version!==1||!m||
     ![m.width,m.height,m.fps,m.heightMeters,m.fov].every(Number.isFinite)||
@@ -153,6 +155,9 @@ export function buildCapture(tracking, {pitch=10,cleanupStrength=.25,stabilize=t
     if(frame.temporalBody && (!temporal || !Array.isArray(frame.temporalBody)||frame.temporalBody.length!==17||
       !frame.temporalBody.every(p=>Array.isArray(p)&&p.length===3&&p.every(v=>Number.isFinite(v)&&Math.abs(v)<100)))) throw new Error('Invalid temporal body prediction.');
     if(frame.body2d && (!Array.isArray(frame.body2d)||frame.body2d.length!==17||!frame.body2d.every(p=>Array.isArray(p)&&p.length===3&&p.every(Number.isFinite)&&p[2]>=0&&p[2]<=1))) throw new Error('Invalid dedicated body detections.');
+    if(frame.refinedBody && (!temporal||!refined||!frame.temporalBody||!Array.isArray(frame.refinedBody)||frame.refinedBody.length!==17||
+      !frame.refinedBody.every(p=>Array.isArray(p)&&p.length===3&&p.every(v=>Number.isFinite(v)&&Math.abs(v)<100)))) throw new Error('Invalid refined arm prediction.');
+    if(refined&&frame.temporalBody&&!frame.refinedBody) throw new Error('Missing refined body; refusing mixed raw/fitted output.');
   }
   const calibration=calibrate(tracking);
   const modelScale=temporal?temporalScale(tracking):null;
@@ -193,7 +198,7 @@ export function buildCapture(tracking, {pitch=10,cleanupStrength=.25,stabilize=t
     }
     if(median(k.slice(23,91).map(p=>p[3]))>=.35 && cameraPoints.slice(23,91).every(p=>p[2]>=.1)) base.face={topology:'coco-wholebody-68',
       world:world.slice(23,91),landmarks:image.slice(23,91),blendshapes:{}};
-    if(temporal) useTemporalBody(base,frame.temporalBody,modelScale);
+    if(temporal) useTemporalBody(base,refined?frame.refinedBody:frame.temporalBody,modelScale);
     return base;
   });
   const capture={format:'framecraft-mocap',version:1,coordinateSystem:'Camera x right, y down, z away; estimated meters; body hips centered. RTMW3D mapped to body33/hand21; native metric face68.',

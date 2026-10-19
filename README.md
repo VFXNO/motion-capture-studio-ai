@@ -35,7 +35,7 @@ The import includes:
 - An animated facial **wire mesh**, not a finished face surface or a character facial rig.
 - MediaPipe expression scores stored as animated `fc_*` custom properties on **Framecraft Face**. RTMW3D's native face68 has no expression scores.
 
-**This is not automatic character retargeting.** Bind or retarget the captured armature to your character in Blender. Once retargeted, Blender can export the animation as FBX or glTF. This app itself exports a versioned `.mocap.json` file, not FBX/BVH.
+**Rigify character retargeting:** install the studio's **Rigify retarget add-on**, then use **N → Framecraft → Rigify Retarget**. Choose the capture and generated Rigify rig, **Auto-map**, then **Bake New Rigify Action**. Body, fingers, and scaled ground travel are baked to editable FK controls. See [RIGIFY.md](RIGIFY.md). Once retargeted, Blender can export the animation as FBX or glTF.
 
 ## Ground-based root motion
 

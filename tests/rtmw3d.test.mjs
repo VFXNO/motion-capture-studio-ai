@@ -170,6 +170,16 @@ test('temporal model body uses anatomical sides, a single scale and its own came
   }
   t.frames[1].temporalBody=null;
   assert.equal(buildCapture(t).frames[1].body,null,'Never silently revert to framewise body');
+  const fitted=structuredClone(before);
+  fitted.metadata.bodyEstimator.refinement={method:'observed-arms-neural-depth-v1'};
+  for(const f of fitted.frames) {f.refinedBody=structuredClone(f.temporalBody);f.refinedBody[13][0]+=.05;}
+  const rawBefore=structuredClone(fitted);
+  const corrected=buildCapture(fitted,{cleanupStrength:0,pitch:0,stabilize:false});
+  assert.deepEqual(fitted,rawBefore,'Raw predictions must never be replaced by fitted joints');
+  assert.ok(Math.abs(corrected.frames[0].body.world[15].x-result.frames[0].body.world[15].x-.05*result.metadata.bodyEstimator.scale)<1e-10);
+  assert.deepEqual(corrected.frames[0].body.world[25],result.frames[0].body.world[25]);
+  delete fitted.frames[1].refinedBody;
+  assert.throws(()=>buildCapture(fitted),/Missing refined body/);
   function mean(a,b){return a.map((v,i)=>(v+b[i])/2);}
 });
 

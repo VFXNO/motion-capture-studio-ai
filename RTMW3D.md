@@ -33,7 +33,7 @@ job requests require the local origin/session token and have size limits.
 The engine selector also offers **MediaPipe · browser AI** explicitly. Its
 capture JSON can be imported manually, as before.
 
-## Rebuilt body estimation (importer 0.7.0)
+## Rebuilt body estimation (importer 0.7.1)
 
 The default now runs a **trained temporal neural network**, rather than making
 independent 3D body estimates and repairing them with the image-ray fitter.
@@ -48,7 +48,16 @@ PC). Its GCN graph does not initialize with DirectML. Image detectors still run
 on DirectML by default. All setup is automatic; no base Python/PyTorch changes,
 SMPL assets, Torch installs or GPU-specific CUDA wheels are needed.
 
-Blender retains learned body directions and uses clip-median limb lengths.
+After inference, observed-arm refinement corrects neural XY errors using
+RTMPose-X image vectors, detector confidence/agreement, and a robust camera scale
+estimated from the torso/legs. Neural depth guides a sequence-wide depth-sign
+selection; continuous depth transitions avoid instantaneous hemisphere flips.
+A stronger dedicated-body detection can outweigh an uncertain RTMW3D joint.
+This is always part of estimation; the Motion cleanup slider controls auxiliary
+hand/foot cleanup, not this image/depth fitting stage.
+
+The neural torso/legs are retained. Blender follows the resulting body17
+directions and uses clip-median limb lengths.
 The temporal branch bypasses the previous image-ray depth-branch solver and
 additional importer body-target smoothing.
 Foot-tip directions still come from RTMW3D; with Motion cleanup enabled their
@@ -59,7 +68,9 @@ Root travel is estimated from projected size/FOV and foot contacts; it is not
 a learned world trajectory. Keep the root parent when exporting.
 
 `.tracking.json` retains original RTMW3D predictions, separate `body2d` RTMPose
-detections and separate `temporalBody` model output. Capture JSON identifies
+detections, raw `temporalBody` model output, and separate `refinedBody` results.
+`metadata.bodyEstimator.refinement` identifies the observed-arm algorithm.
+Capture JSON identifies
 `metadata.bodyEstimator` and carries the 17-joint body plus compatibility body33.
 Hands/face/foot detail still come from RTMW3D; this body network does not recover
 hidden fingers or facial expression scores. Human3.6M-trained lifting can still
@@ -72,7 +83,25 @@ adds temporal inference; old tracks without `body2d` use their recorded RTMW3D
 XY instead of the new dedicated detector. `run --body-model legacy` explicitly
 selects the earlier framewise model for comparison.
 
-### Dance-clip verification (2026-10-18)
+### Observed-arm correction (2026-10-19)
+
+`Documents/Framecraft Dance Arm Corrected.blend` and matching capture JSON use
+the new arm-refinement stage. `Framecraft Dance Arm Corrected Comparison.mp4`
+shows source / previous temporal rig / corrected rig at matching timestamps.
+The clearly visible raised wrist around 2.23s now points upward with the source
+instead of folding toward the head; the transition around 10.97s also follows
+the detected arm. Review still cannot establish hidden-arm depth at 10.13s.
+
+For this 369-sample scene, body orientation steps over 45 degrees fell from 3
+to 0; hand steps over 45 degrees remain 0. Mean arm reprojection discrepancy
+against RTMW3D image detections fell from 18.76 to 12.55 pixels. These are
+diagnostics, not ground-truth accuracy: the obscured arm at 10.13s is a case
+where RTMW3D and RTMPose-X disagree. Raw predictions remain byte-equivalent as
+JSON values, and non-arm body17 joints are unchanged by the new refinement.
+48 Python tests, 34 JavaScript tests, real browser capture/export and final
+saved-scene geometry, root/face transport and arm-direction checks passed.
+
+### Earlier temporal-body delivery (2026-10-18)
 
 Delivered `Documents/Framecraft Dance Temporal AI.blend`, matching capture JSON,
 and `Framecraft Dance Temporal AI Comparison.mp4` (source beside evaluated rig
